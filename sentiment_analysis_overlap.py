@@ -1,4 +1,3 @@
-from transformers import pipeline
 import numpy as np
 
 # 1. Create a sentiment analysis pipeline

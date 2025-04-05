@@ -2,6 +2,10 @@ import numpy as np
 from transformers import AutoTokenizer, AutoModel
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
+
+
+df = pd.read_csv("train.csv")
 
 def get_embedding(text, tokenizer, model, device):
     # Tokenize input
@@ -52,50 +56,51 @@ df['b_semantic_overlap'] = df.apply(
     axis=1
 )
 
+# save the dataframe with the new features
+df.to_csv('df_with_semantic_overlap.csv', index=False)
 
 
 
 
 
 
+# ######################################BATCH EMBEDDINGS#################################################################
 
-######################################BATCH EMBEDDINGS#################################################################
-
-def get_batch_embeddings(texts, tokenizer, model, device, batch_size=32):
-    embeddings = []
+# def get_batch_embeddings(texts, tokenizer, model, device, batch_size=32):
+#     embeddings = []
     
-    for i in range(0, len(texts), batch_size):
-        batch_texts = texts[i:i+batch_size]
-        encoded_input = tokenizer(batch_texts, padding=True, truncation=True, max_length=512, return_tensors='pt')
-        encoded_input = {k: v.to(device) for k, v in encoded_input.items()}
+#     for i in range(0, len(texts), batch_size):
+#         batch_texts = texts[i:i+batch_size]
+#         encoded_input = tokenizer(batch_texts, padding=True, truncation=True, max_length=512, return_tensors='pt')
+#         encoded_input = {k: v.to(device) for k, v in encoded_input.items()}
         
-        with torch.no_grad():
-            model_output = model(**encoded_input)
+#         with torch.no_grad():
+#             model_output = model(**encoded_input)
         
-        # Mean pooling
-        token_embeddings = model_output.last_hidden_state
-        attention_mask = encoded_input['attention_mask']
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-        batch_embeddings = (sum_embeddings / sum_mask).cpu().numpy()
+#         # Mean pooling
+#         token_embeddings = model_output.last_hidden_state
+#         attention_mask = encoded_input['attention_mask']
+#         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+#         sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+#         sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+#         batch_embeddings = (sum_embeddings / sum_mask).cpu().numpy()
         
-        embeddings.append(batch_embeddings)
+#         embeddings.append(batch_embeddings)
     
-    return np.vstack(embeddings)
+#     return np.vstack(embeddings)
 
-# Process all texts in batches
-prompts = df['prompt'].tolist()
-responses_a = df['response_a'].tolist()
-responses_b = df['response_b'].tolist()
+# # Process all texts in batches
+# prompts = df['prompt'].tolist()
+# responses_a = df['response_a'].tolist()
+# responses_b = df['response_b'].tolist()
 
-prompt_embeddings = get_batch_embeddings(prompts, tokenizer, model, device)
-response_a_embeddings = get_batch_embeddings(responses_a, tokenizer, model, device)
-response_b_embeddings = get_batch_embeddings(responses_b, tokenizer, model, device)
+# prompt_embeddings = get_batch_embeddings(prompts, tokenizer, model, device)
+# response_a_embeddings = get_batch_embeddings(responses_a, tokenizer, model, device)
+# response_b_embeddings = get_batch_embeddings(responses_b, tokenizer, model, device)
 
-# Calculate similarities
-similarities_a = [cosine_similarity([p], [r])[0][0] for p, r in zip(prompt_embeddings, response_a_embeddings)]
-similarities_b = [cosine_similarity([p], [r])[0][0] for p, r in zip(prompt_embeddings, response_b_embeddings)]
+# # Calculate similarities
+# similarities_a = [cosine_similarity([p], [r])[0][0] for p, r in zip(prompt_embeddings, response_a_embeddings)]
+# similarities_b = [cosine_similarity([p], [r])[0][0] for p, r in zip(prompt_embeddings, response_b_embeddings)]
 
-df['a_semantic_overlap'] = similarities_a
-df['b_semantic_overlap'] = similarities_b
+# df['a_semantic_overlap'] = similarities_a
+# df['b_semantic_overlap'] = similarities_b
